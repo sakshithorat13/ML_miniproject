@@ -182,7 +182,7 @@
 
 import pandas as pd
 import matplotlib
-matplotlib.use('Agg')  # Non-GUI backend for Flask/FastAPI
+matplotlib.use('Agg')  # Non-GUI backend for Flask
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
@@ -202,21 +202,10 @@ def _fig_to_base64(fig) -> str:
     return data
 
 
-def _add_caption(fig, caption: str):
-    """Add a caption/insight text below a matplotlib figure."""
-    fig.text(
-        0.5, -0.05, caption,
-        ha='center', va='top',
-        fontsize=10, color='dimgray',
-        wrap=True,
-        bbox=dict(boxstyle="round,pad=0.4", facecolor="whitesmoke", edgecolor="lightgray")
-    )
-
-
 def run(age: Optional[int] = None):
     """
-    Generate visualizations and dataset insights for Heart Disease Prediction.
-    Each plot includes its own descriptive caption inside the image.
+    Generate visualizations and insights for Heart Disease Prediction dataset.
+    Images and insights are returned separately.
     """
     data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'Heart_Disease_Prediction.csv')
     df = pd.read_csv(data_path)
@@ -239,7 +228,6 @@ def run(age: Optional[int] = None):
         if col in df.columns:
             df[col] = df[col].map(mapping).fillna(df[col])
 
-    # ---- Dataset summary ----
     stats = {
         "shape": df.shape,
         "columns": df.columns.tolist(),
@@ -247,7 +235,6 @@ def run(age: Optional[int] = None):
         "data_types": df.dtypes.astype(str).to_dict()
     }
 
-    # ---- Filter by age if provided ----
     filtered_by = None
     if age is not None and "Age" in df.columns:
         df_filtered = df[df["Age"] == age]
@@ -258,23 +245,27 @@ def run(age: Optional[int] = None):
                 "metrics": stats,
                 "filtered_by": filtered_by,
                 "plots": {},
+                "insights_table": [],
                 "message": f"No records found for Age={age}"
             }
     else:
         df_filtered = df.copy()
 
-    plots, descriptions = {}, {}
+    plots = {}
+    insights_table = []
 
     # 1️⃣ Pie Chart: Chest Pain Type
     if "Chest pain type" in df_filtered.columns:
         fig, ax = plt.subplots(figsize=(5, 5))
         counts = df_filtered["Chest pain type"].value_counts()
-        ax.pie(counts.values, labels=counts.index, autopct='%1.1f%%', startangle=90, colors=sns.color_palette("pastel"))
+        ax.pie(counts.values, labels=counts.index, autopct='%1.1f%%', startangle=90,
+               colors=sns.color_palette("pastel"))
         ax.set_title("Distribution of Chest Pain Types", fontsize=13)
-        caption = "Shows proportions of different chest pain types. Typical and atypical angina often indicate heart-related issues."
-        _add_caption(fig, caption)
         plots["chest_pain_pie"] = _fig_to_base64(fig)
-        descriptions["Chest Pain Distribution"] = caption
+        insights_table.append({
+            "Graph": "Distribution of Chest Pain Types",
+            "Insight": "Shows proportions of different chest pain types. Typical and atypical angina are more likely to indicate heart-related issues."
+        })
 
     # 2️⃣ Bar Chart: Gender Distribution
     if "Sex" in df_filtered.columns:
@@ -283,10 +274,11 @@ def run(age: Optional[int] = None):
         ax.set_title("Gender Distribution of Patients", fontsize=13)
         ax.set_xlabel("Gender")
         ax.set_ylabel("Count")
-        caption = "Compares the number of male and female patients in the dataset."
-        _add_caption(fig, caption)
         plots["gender_bar"] = _fig_to_base64(fig)
-        descriptions["Gender Distribution"] = caption
+        insights_table.append({
+            "Graph": "Gender Distribution",
+            "Insight": "Shows the number of male and female patients. Males are more frequently represented in the dataset."
+        })
 
     # 3️⃣ Line Chart: Cholesterol by Age
     if "Age" in df_filtered.columns and "Cholesterol" in df_filtered.columns:
@@ -296,10 +288,11 @@ def run(age: Optional[int] = None):
         ax.set_title("Average Cholesterol by Age", fontsize=13)
         ax.set_xlabel("Age")
         ax.set_ylabel("Mean Cholesterol Level")
-        caption = "Shows how average cholesterol levels vary across different age groups."
-        _add_caption(fig, caption)
         plots["cholesterol_line"] = _fig_to_base64(fig)
-        descriptions["Cholesterol vs Age"] = caption
+        insights_table.append({
+            "Graph": "Average Cholesterol by Age",
+            "Insight": "Displays how average cholesterol levels increase with age, highlighting risk growth in middle-aged and older adults."
+        })
 
     # 4️⃣ Bar Chart: Exercise Angina vs Heart Disease
     if "Exercise angina" in df_filtered.columns and "Heart Disease" in df_filtered.columns:
@@ -308,10 +301,11 @@ def run(age: Optional[int] = None):
         ax.set_title("Exercise Angina vs Heart Disease", fontsize=13)
         ax.set_xlabel("Exercise-Induced Angina")
         ax.set_ylabel("Patient Count")
-        caption = "Patients with exercise-induced angina are more likely to have heart disease, as shown by the taller 'Presence' bars under 'Yes'."
-        _add_caption(fig, caption)
         plots["angina_bar"] = _fig_to_base64(fig)
-        descriptions["Exercise Angina vs Heart Disease"] = caption
+        insights_table.append({
+            "Graph": "Exercise Angina vs Heart Disease",
+            "Insight": "Patients with exercise-induced angina show a higher prevalence of heart disease, visible through taller red bars."
+        })
 
     # 5️⃣ Correlation Heatmap
     try:
@@ -325,19 +319,20 @@ def run(age: Optional[int] = None):
         sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", cbar=True, linewidths=0.5)
         plt.title("Correlation Heatmap", fontsize=14)
         fig = plt.gcf()
-        caption = "Displays correlation between features. Positive = increase together; negative = inverse relationship."
-        _add_caption(fig, caption)
         plots["correlation_heatmap"] = _fig_to_base64(fig)
-        descriptions["Correlation Heatmap"] = caption
-    except Exception:
-        pass
+        insights_table.append({
+            "Graph": "Correlation Heatmap",
+            "Insight": "Displays correlation between all numeric features. Strong positive/negative relationships indicate predictive potential for heart disease."
+        })
+    except Exception as e:
+        print("Heatmap generation failed:", e)
 
     return {
         "experiment": "Heart Disease Data Visualization",
         "metrics": stats,
         "filtered_by": filtered_by,
         "plots": plots,
-        "descriptions": descriptions
+        "insights_table": insights_table
     }
 
 
@@ -353,21 +348,16 @@ if __name__ == "__main__":
     out_dir = os.path.join(os.path.dirname(__file__), "..", "static")
     os.makedirs(out_dir, exist_ok=True)
 
-    print("\n📊 Experiment:", result.get("experiment", "N/A"))
-    print("📁 Dataset Shape:", result["metrics"]["shape"])
-    if result.get("filtered_by"):
-        print("🔍 Filter Applied:", result["filtered_by"])
-    print("\n🧾 Dataset Columns:", ", ".join(result["metrics"]["columns"]))
-
     plots = result.get("plots", {})
     if not plots:
-        print("\n❌ No plots generated. Message:", result.get("message", ""))
+        print("No plots were generated. Message:", result.get("message", ""))
     else:
-        print("\n✅ Generated Visualizations and Insights:")
-        for name, caption in result["descriptions"].items():
-            filename = os.path.join(out_dir, f"{name.replace(' ', '_').lower()}" + (f"_age_{age_val}" if age_val is not None else "") + ".png")
+        for name, b64 in plots.items():
+            filename = os.path.join(out_dir, f"{name}" + (f"_age_{age_val}" if age_val is not None else "") + ".png")
             with open(filename, "wb") as f:
-                f.write(base64.b64decode(result["plots"][name.replace(' ', '_').lower()]))
-            print(f"\n📈 {name}")
-            print(f"   ➤ Insight: {caption}")
-            print(f"   💾 Saved to: {filename}")
+                f.write(base64.b64decode(b64))
+            print(f"✅ Saved: {filename}")
+
+        print("\n📊 Insights Table:")
+        for row in result["insights_table"]:
+            print(f"- {row['Graph']}: {row['Insight']}")

@@ -203,6 +203,11 @@
 
 
 
+
+
+
+
+
 import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
@@ -357,7 +362,7 @@ function App() {
                     {/* Multiple plots */}
                     {result.plots &&
                       Object.entries(result.plots).map(([key, val]) => (
-                        <div key={key} style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                        <div key={key} style={{ marginBottom: '3rem', textAlign: 'center' }}>
                           <h4>{key.replace(/_/g, ' ').toUpperCase()}</h4>
                           <img
                             src={`data:image/png;base64,${val}`}
@@ -366,6 +371,29 @@ function App() {
                           />
                         </div>
                       ))}
+                  </div>
+                )}
+
+                {/* Insights Table */}
+                {result.insights_table && result.insights_table.length > 0 && (
+                  <div className="insights-section" style={{ marginTop: '2rem' }}>
+                    <h3 className="section-title">🧩 Insights and Interpretation</h3>
+                    <table className="insights-table">
+                      <thead>
+                        <tr>
+                          <th>Graph</th>
+                          <th>Insight</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.insights_table.map((item, index) => (
+                          <tr key={index}>
+                            <td>{item.Graph}</td>
+                            <td>{item.Insight}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -394,9 +422,4 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
 
