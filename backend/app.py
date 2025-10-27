@@ -6,7 +6,7 @@ import os
 # Add models directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 
-from models import visualization, regression, classification, svm_model, ensemble, nonlinear_regression, clustering, pca_analysis
+from models import visualization, regression, classification, svm_model, ensemble, nonlinear_regression, clustering, pca_analysis,pca
 
 app = Flask(__name__)
 CORS(app)
