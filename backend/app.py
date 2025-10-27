@@ -6,7 +6,7 @@ import os
 # Add models directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
 
-from models import visualization, regression, classification, svm_model, ensemble, nonlinear_regression, clustering, pca_analysis,pca
+from models import visualization, regression, classification, svm_model, ensemble, nonlinear_regression, clustering, pca_analysis,pca,pca_model
 
 app = Flask(__name__)
 CORS(app)
@@ -32,7 +32,9 @@ def run_experiment():
         elif exp == "clustering":
             return jsonify(clustering.run())
         elif exp == "pca":
-            return jsonify(pca_analysis.run())
+            return jsonify(pca_model.run())
+        elif exp == "pca_model":
+            return jsonify(pca_model.run())
         else:
             return jsonify({"error": "Invalid experiment type"}), 400
     except Exception as e:

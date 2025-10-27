@@ -1,75 +1,138 @@
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans, DBSCAN
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.decomposition import PCA
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import base64
 import io
 import os
 
 def run():
-    # Load dataset
-    data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'Heart_Disease_Prediction.csv')
-    df = pd.read_csv(data_path)
-    
-    # Prepare numeric features
-    numeric_cols = df.select_dtypes(include=[np.number]).columns
-    X = df[numeric_cols].fillna(df[numeric_cols].mean())
-    
-    # Scale features
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
-    # Apply PCA for 2D visualization
-    pca = PCA(n_components=2)
-    X_pca = pca.fit_transform(X_scaled)
-    
-    # KMeans clustering
-    kmeans = KMeans(n_clusters=3, random_state=42)
-    kmeans_labels = kmeans.fit_predict(X_scaled)
-    
-    # DBSCAN clustering
-    dbscan = DBSCAN(eps=0.5, min_samples=5)
-    dbscan_labels = dbscan.fit_predict(X_scaled)
-    
-    # Create comparison plot
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-    
-    # KMeans plot
-    ax1.scatter(X_pca[:, 0], X_pca[:, 1], c=kmeans_labels, cmap='viridis', alpha=0.6)
-    ax1.set_title('KMeans Clustering (k=3)')
-    ax1.set_xlabel('First Principal Component')
-    ax1.set_ylabel('Second Principal Component')
-    
-    # DBSCAN plot
-    ax2.scatter(X_pca[:, 0], X_pca[:, 1], c=dbscan_labels, cmap='viridis', alpha=0.6)
-    ax2.set_title('DBSCAN Clustering')
-    ax2.set_xlabel('First Principal Component')
-    ax2.set_ylabel('Second Principal Component')
-    
-    plt.tight_layout()
-    
-    # Save plot to base64
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png', dpi=100)
-    buffer.seek(0)
-    plot_data = base64.b64encode(buffer.getvalue()).decode()
-    plt.close()
-    
-    # Calculate metrics
-    n_clusters_kmeans = len(np.unique(kmeans_labels))
-    n_clusters_dbscan = len(np.unique(dbscan_labels[dbscan_labels != -1]))
-    n_noise_dbscan = np.sum(dbscan_labels == -1)
-    
-    return {
-        "experiment": "Clustering Analysis",
-        "metrics": {
-            "kmeans_clusters": n_clusters_kmeans,
-            "dbscan_clusters": n_clusters_dbscan,
-            "dbscan_noise_points": n_noise_dbscan,
-            "pca_explained_variance": pca.explained_variance_ratio_.tolist(),
-            "features_used": len(numeric_cols)
-        },
-        "plot": plot_data
-    }
+    try:
+        # Load dataset
+        data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'Heart_Disease_Prediction.csv')
+        df = pd.read_csv(data_path)
+        
+        print("Dataset shape:", df.shape)
+        
+        # Select numeric features for clustering
+        numeric_features = ['Age', 'BP', 'Cholesterol', 'Max HR']
+        
+        # Clean and prepare data
+        df_clean = df[numeric_features].dropna()
+        X = df_clean.values
+        
+        # Handle any remaining missing values
+        X = np.nan_to_num(X, nan=np.nanmean(X))
+        
+        # Scale the features (important for K-Means)
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        
+        # Elbow Method to find Optimal K
+        wcss = []
+        for k in range(1, 11):
+            kmeans = KMeans(n_clusters=k, init='k-means++', random_state=42, n_init=10)
+            kmeans.fit(X_scaled)
+            wcss.append(kmeans.inertia_)
+        
+        # Apply K-Means with chosen K (k=4)
+        kmeans = KMeans(n_clusters=4, init='k-means++', random_state=42, n_init=10)
+        y_kmeans = kmeans.fit_predict(X_scaled)
+        
+        # Add cluster labels to dataframe
+        df_clean['Cluster'] = y_kmeans
+        
+        # Create visualizations
+        fig = plt.figure(figsize=(15, 5))
+        
+        # Elbow Method Plot
+        ax1 = fig.add_subplot(131)
+        ax1.plot(range(1, 11), wcss, marker='o', color='blue')
+        ax1.set_title('Elbow Method (Optimal K for Heart Disease Clusters)')
+        ax1.set_xlabel('Number of Clusters (k)')
+        ax1.set_ylabel('WCSS')
+        ax1.grid(True, alpha=0.3)
+        
+        # Cluster Visualization (Age vs BP)
+        ax2 = fig.add_subplot(132)
+        colors = ['red', 'blue', 'green', 'orange']
+        for i in range(4):
+            cluster_data = df_clean[df_clean['Cluster'] == i]
+            ax2.scatter(cluster_data['Age'], cluster_data['BP'],
+                       s=50, c=colors[i], label=f'Cluster {i+1}', alpha=0.6)
+        
+        # Plot centroids (projected back to original scale)
+        centers = scaler.inverse_transform(kmeans.cluster_centers_)
+        age_idx = numeric_features.index('Age')
+        bp_idx = numeric_features.index('BP')
+        ax2.scatter(centers[:, age_idx], centers[:, bp_idx],
+                   s=300, c='yellow', marker='X', label='Centroids', 
+                   edgecolors='black', linewidth=2)
+        
+        ax2.set_title('Heart Disease Risk Clusters (Age vs BP)')
+        ax2.set_xlabel('Age')
+        ax2.set_ylabel('Blood Pressure')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        
+        # Cluster Visualization (BP vs Cholesterol)
+        ax3 = fig.add_subplot(133)
+        for i in range(4):
+            cluster_data = df_clean[df_clean['Cluster'] == i]
+            ax3.scatter(cluster_data['BP'], cluster_data['Cholesterol'],
+                       s=50, c=colors[i], label=f'Cluster {i+1}', alpha=0.6)
+        
+        # Plot centroids
+        chol_idx = numeric_features.index('Cholesterol')
+        ax3.scatter(centers[:, bp_idx], centers[:, chol_idx],
+                   s=300, c='yellow', marker='X', label='Centroids',
+                   edgecolors='black', linewidth=2)
+        
+        ax3.set_title('Heart Disease Risk Clusters (BP vs Cholesterol)')
+        ax3.set_xlabel('Blood Pressure')
+        ax3.set_ylabel('Cholesterol')
+        ax3.legend()
+        ax3.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        
+        # Save plot to base64
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=120, bbox_inches='tight')
+        buffer.seek(0)
+        plot_data = base64.b64encode(buffer.getvalue()).decode()
+        plt.close()
+        
+        # Calculate cluster statistics
+        cluster_stats = {}
+        for i in range(4):
+            cluster_data = df_clean[df_clean['Cluster'] == i]
+            cluster_stats[f'cluster_{i+1}'] = {
+                'size': len(cluster_data),
+                'avg_age': round(cluster_data['Age'].mean(), 1),
+                'avg_bp': round(cluster_data['BP'].mean(), 1),
+                'avg_cholesterol': round(cluster_data['Cholesterol'].mean(), 1)
+            }
+        
+        return {
+            "experiment": "K-Means Clustering Analysis",
+            "metrics": {
+                "total_samples": len(df_clean),
+                "features_used": numeric_features,
+                "optimal_clusters": 4,
+                "wcss_values": wcss,
+                "cluster_statistics": cluster_stats
+            },
+            "plot": plot_data
+        }
+        
+    except Exception as e:
+        return {
+            "experiment": "K-Means Clustering Analysis",
+            "error": str(e),
+            "plot": ""
+        }

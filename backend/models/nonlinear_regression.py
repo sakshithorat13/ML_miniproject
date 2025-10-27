@@ -1,70 +1,175 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import StandardScaler, LabelEncoder, PolynomialFeatures
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
 import base64
 import io
 import os
 
 def run():
-    # Load dataset
-    data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'Heart_Disease_Prediction.csv')
-    df = pd.read_csv(data_path)
-    
-    # Select numeric columns for regression
-    numeric_cols = df.select_dtypes(include=[np.number]).columns
-    target_col = 'chol' if 'chol' in numeric_cols else numeric_cols[0]
-    feature_cols = [col for col in numeric_cols if col != target_col][:3]  # Use first 3 features
-    
-    X = df[feature_cols].fillna(df[feature_cols].mean())
-    y = df[target_col].fillna(df[target_col].mean())
-    
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Apply polynomial features
-    poly_features = PolynomialFeatures(degree=2, include_bias=False)
-    X_train_poly = poly_features.fit_transform(X_train)
-    X_test_poly = poly_features.transform(X_test)
-    
-    # Train polynomial regression
-    model = LinearRegression()
-    model.fit(X_train_poly, y_train)
-    
-    # Predictions
-    y_pred = model.predict(X_test_poly)
-    
-    # Metrics
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-    
-    # Create prediction vs actual plot
-    plt.figure(figsize=(10, 6))
-    plt.scatter(y_test, y_pred, alpha=0.6)
-    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
-    plt.xlabel('Actual Values')
-    plt.ylabel('Predicted Values')
-    plt.title(f'Polynomial Regression (Degree 2): Actual vs Predicted ({target_col})')
-    plt.tight_layout()
-    
-    # Save plot to base64
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png', dpi=100)
-    buffer.seek(0)
-    plot_data = base64.b64encode(buffer.getvalue()).decode()
-    plt.close()
-    
-    return {
-        "experiment": "Multivariate Nonlinear Regression",
-        "metrics": {
-            "polynomial_degree": 2,
-            "mse": round(mse, 4),
-            "r2_score": round(r2, 4),
-            "target_variable": target_col,
-            "features_used": len(feature_cols)
-        },
-        "plot": plot_data
-    }
+    try:
+        # Load dataset
+        data_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'Heart_Disease_Prediction.csv')
+        df = pd.read_csv(data_path)
+        
+        # Select three main features for 3D visualization
+        feature_cols = ['Age', 'BP', 'Cholesterol']
+        target_col = 'Heart Disease'
+        
+        # Clean data - remove rows with missing values in selected features
+        df_clean = df[feature_cols + [target_col]].dropna()
+        
+        # Create binary target (High vs Low Risk based on median)
+        if df_clean[target_col].dtype == 'object':
+            # Convert categorical to binary
+            df_clean['High_Risk'] = (df_clean[target_col] == 'Presence').astype(int)
+        else:
+            # Use median split for numeric targets
+            median_val = df_clean[target_col].median()
+            df_clean['High_Risk'] = (df_clean[target_col] >= median_val).astype(int)
+        
+        # Features and Target
+        X = df_clean[feature_cols]
+        y = df_clean['High_Risk']
+        
+        # Train-Test Split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, stratify=y, random_state=42
+        )
+        
+        # Scale features for SVM
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+        
+        # Create polynomial features for nonlinear regression
+        poly = PolynomialFeatures(degree=2, include_bias=False)
+        X_train_poly = poly.fit_transform(X_train)
+        X_test_poly = poly.transform(X_test)
+        
+        # Scale polynomial features
+        scaler_poly = StandardScaler()
+        X_train_poly_scaled = scaler_poly.fit_transform(X_train_poly)
+        X_test_poly_scaled = scaler_poly.transform(X_test_poly)
+        
+        # Train Models
+        # Decision Tree
+        dt = DecisionTreeClassifier(criterion="entropy", random_state=42)
+        dt.fit(X_train, y_train)
+        dt_pred = dt.predict(X_test)
+        
+        # SVM (RBF Kernel)
+        svm_rbf = SVC(kernel="rbf", C=1.0, gamma="scale", random_state=42)
+        svm_rbf.fit(X_train_scaled, y_train)
+        svm_pred = svm_rbf.predict(X_test_scaled)
+        
+        # Polynomial Logistic Regression
+        poly_lr = LogisticRegression(random_state=42, max_iter=1000)
+        poly_lr.fit(X_train_poly_scaled, y_train)
+        poly_pred = poly_lr.predict(X_test_poly_scaled)
+        
+        # Calculate accuracies
+        dt_accuracy = accuracy_score(y_test, dt_pred)
+        svm_accuracy = accuracy_score(y_test, svm_pred)
+        poly_accuracy = accuracy_score(y_test, poly_pred)
+        
+        # Create visualizations
+        fig = plt.figure(figsize=(18, 6))
+        
+        # 3D Scatter Plot
+        ax1 = fig.add_subplot(131, projection='3d')
+        
+        x = df_clean['Age']
+        y_val = df_clean['BP']  
+        z = df_clean['Cholesterol']
+        labels = df_clean['High_Risk']
+        
+        # Plot high risk (1) and low risk (0)
+        ax1.scatter(x[labels==1], y_val[labels==1], z[labels==1], 
+                   c='red', label="High Risk", s=30, alpha=0.6)
+        ax1.scatter(x[labels==0], y_val[labels==0], z[labels==0], 
+                   c='blue', label="Low Risk", s=30, alpha=0.6)
+        
+        ax1.set_xlabel("Age")
+        ax1.set_ylabel("Blood Pressure")
+        ax1.set_zlabel("Cholesterol")
+        ax1.set_title("3D Plot: Heart Disease Risk vs Features")
+        ax1.legend()
+        
+        # Confusion Matrix - SVM RBF
+        ax2 = fig.add_subplot(132)
+        cm_svm = confusion_matrix(y_test, svm_pred)
+        im2 = ax2.imshow(cm_svm, cmap=plt.cm.Blues)
+        ax2.set_title("Confusion Matrix - SVM RBF")
+        plt.colorbar(im2, ax=ax2)
+        ax2.set_xticks([0,1])
+        ax2.set_yticks([0,1])
+        ax2.set_xticklabels(['Low Risk', 'High Risk'])
+        ax2.set_yticklabels(['Low Risk', 'High Risk'])
+        
+        # Add text annotations
+        for i in range(cm_svm.shape[0]):
+            for j in range(cm_svm.shape[1]):
+                ax2.text(j, i, cm_svm[i, j], ha='center', va='center', color='black', fontweight='bold')
+        
+        ax2.set_xlabel("Predicted")
+        ax2.set_ylabel("Actual")
+        
+        # Confusion Matrix - Polynomial Regression
+        ax3 = fig.add_subplot(133)
+        cm_poly = confusion_matrix(y_test, poly_pred)
+        im3 = ax3.imshow(cm_poly, cmap=plt.cm.Blues)
+        ax3.set_title("Confusion Matrix - Polynomial Regression")
+        plt.colorbar(im3, ax=ax3)
+        ax3.set_xticks([0,1])
+        ax3.set_yticks([0,1])
+        ax3.set_xticklabels(['Low Risk', 'High Risk'])
+        ax3.set_yticklabels(['Low Risk', 'High Risk'])
+        
+        # Add text annotations
+        for i in range(cm_poly.shape[0]):
+            for j in range(cm_poly.shape[1]):
+                ax3.text(j, i, cm_poly[i, j], ha='center', va='center', color='black', fontweight='bold')
+        
+        ax3.set_xlabel("Predicted")
+        ax3.set_ylabel("Actual")
+        
+        plt.tight_layout()
+        
+        # Save plot to base64
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=120, bbox_inches='tight')
+        buffer.seek(0)
+        plot_data = base64.b64encode(buffer.getvalue()).decode()
+        plt.close()
+        
+        return {
+            "experiment": "Multivariate Nonlinear Regression",
+            "metrics": {
+                "decision_tree_accuracy": round(dt_accuracy, 4),
+                "svm_rbf_accuracy": round(svm_accuracy, 4),
+                "polynomial_accuracy": round(poly_accuracy, 4),
+                "features_used": feature_cols,
+                "polynomial_degree": 2,
+                "test_samples": len(y_test),
+                "high_risk_samples": int(sum(df_clean['High_Risk'])),
+                "low_risk_samples": int(len(df_clean) - sum(df_clean['High_Risk']))
+            },
+            "plot": plot_data
+        }
+        
+    except Exception as e:
+        return {
+            "experiment": "Multivariate Nonlinear Regression",
+            "error": str(e),
+            "plot": ""
+        }
