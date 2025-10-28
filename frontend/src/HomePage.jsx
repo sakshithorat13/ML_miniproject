@@ -1,12 +1,13 @@
 import React from 'react';
-import './HomePage.css';
 
 const HomePage = ({ onGoToDashboard }) => {
   return (
     <div style={{ 
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'white'
+      color: 'white',
+      margin: 0,
+      padding: 0
     }}>
       {/* Hero Section */}
       <div style={{ padding: '80px 20px', textAlign: 'center' }}>
@@ -59,7 +60,7 @@ const HomePage = ({ onGoToDashboard }) => {
             marginBottom: '50px',
             color: '#2c3e50'
           }}>
-            About Our Dataset
+            About Our Heart Disease Dataset
           </h2>
           
           <div style={{ 
@@ -123,6 +124,98 @@ const HomePage = ({ onGoToDashboard }) => {
             </div>
           </div>
 
+          {/* Benefits Section */}
+          <div style={{ marginBottom: '60px' }}>
+            <h3 style={{ textAlign: 'center', fontSize: '2rem', marginBottom: '40px', color: '#2c3e50' }}>
+              How This Helps Healthcare
+            </h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '25px'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '20px',
+                background: '#f0f8ff',
+                padding: '25px',
+                borderRadius: '12px',
+                borderLeft: '5px solid #4CAF50'
+              }}>
+                <div style={{ fontSize: '2.5rem', minWidth: '60px' }}>🔍</div>
+                <div>
+                  <strong style={{ display: 'block', color: '#2e7d32', marginBottom: '8px', fontSize: '1.1rem' }}>
+                    Early Detection
+                  </strong>
+                  <p style={{ color: '#666', margin: 0, lineHeight: '1.5' }}>
+                    Identify at-risk patients before symptoms develop
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '20px',
+                background: '#f0f8ff',
+                padding: '25px',
+                borderRadius: '12px',
+                borderLeft: '5px solid #4CAF50'
+              }}>
+                <div style={{ fontSize: '2.5rem', minWidth: '60px' }}>⚡</div>
+                <div>
+                  <strong style={{ display: 'block', color: '#2e7d32', marginBottom: '8px', fontSize: '1.1rem' }}>
+                    Quick Screening
+                  </strong>
+                  <p style={{ color: '#666', margin: 0, lineHeight: '1.5' }}>
+                    Rapid risk assessment in clinical settings
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '20px',
+                background: '#f0f8ff',
+                padding: '25px',
+                borderRadius: '12px',
+                borderLeft: '5px solid #4CAF50'
+              }}>
+                <div style={{ fontSize: '2.5rem', minWidth: '60px' }}>💡</div>
+                <div>
+                  <strong style={{ display: 'block', color: '#2e7d32', marginBottom: '8px', fontSize: '1.1rem' }}>
+                    Treatment Planning
+                  </strong>
+                  <p style={{ color: '#666', margin: 0, lineHeight: '1.5' }}>
+                    Personalized care strategies based on risk profiles
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '20px',
+                background: '#f0f8ff',
+                padding: '25px',
+                borderRadius: '12px',
+                borderLeft: '5px solid #4CAF50'
+              }}>
+                <div style={{ fontSize: '2.5rem', minWidth: '60px' }}>💰</div>
+                <div>
+                  <strong style={{ display: 'block', color: '#2e7d32', marginBottom: '8px', fontSize: '1.1rem' }}>
+                    Cost Reduction
+                  </strong>
+                  <p style={{ color: '#666', margin: 0, lineHeight: '1.5' }}>
+                    Prevent expensive emergency interventions
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Call to Action */}
           <div style={{ 
             textAlign: 'center',
@@ -133,7 +226,7 @@ const HomePage = ({ onGoToDashboard }) => {
             marginTop: '60px'
           }}>
             <h2 style={{ fontSize: '2.2rem', marginBottom: '20px', fontWeight: '600' }}>
-              Explore Our ML Analytics Dashboard
+              🚀 Explore Our ML Analytics Dashboard
             </h2>
             <p style={{ 
               fontSize: '1.1rem', 
@@ -160,14 +253,6 @@ const HomePage = ({ onGoToDashboard }) => {
                 cursor: 'pointer',
                 boxShadow: '0 5px 15px rgba(255, 215, 0, 0.3)',
                 transition: 'all 0.3s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = '#ffed4e';
-                e.target.style.transform = 'translateY(-2px)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = '#ffd700';
-                e.target.style.transform = 'translateY(0)';
               }}
             >
               Go to Dashboard →
