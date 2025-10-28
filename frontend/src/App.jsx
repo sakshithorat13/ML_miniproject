@@ -1,6 +1,3 @@
-
-
-
 import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
@@ -200,6 +197,50 @@ function App() {
 </tbody>
 
                     </table>
+                  </div>
+                )}
+
+                {/* Analysis Section */}
+                {result.analysis && (
+                  <div className="analysis-section">
+                    <h3>🔬 Analysis & Interpretation</h3>
+                    
+                    <div className="graph-interpretation">
+                      <h4>📈 Graph Interpretation:</h4>
+                      <div className="interpretation-content">
+                        {result.analysis.graph_interpretation.split('\n').map((line, index) => (
+                          <p key={index}>{line}</p>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="key-insights">
+                      <h4>🔍 Key Insights:</h4>
+                      <ul>
+                        {result.analysis.key_inferences?.map((insight, index) => (
+                          <li key={index}>{insight}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div className="what-graph-shows">
+                      <h4>📋 What the Graph Shows:</h4>
+                      <p>{result.analysis.what_graph_shows}</p>
+                    </div>
+                    
+                    <div className="why-graph-like-this">
+                      <h4>🤔 Why the Graph Looks Like This:</h4>
+                      <p>{result.analysis.why_graph_like_this}</p>
+                    </div>
+                    
+                    <div className="practical-applications">
+                      <h4>🏥 Practical Applications:</h4>
+                      <ul>
+                        {result.analysis.practical_applications?.map((app, index) => (
+                          <li key={index}>{app}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 )}
               </div>

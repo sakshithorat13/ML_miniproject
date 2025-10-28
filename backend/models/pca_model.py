@@ -70,6 +70,10 @@ def run():
         explained_variance_ratio = pca.explained_variance_ratio_
         cumulative_variance = np.cumsum(explained_variance_ratio)
         
+        # Find top features by explained variance
+        top_variance_indices = np.argsort(explained_variance_ratio)[::-1][:2]
+        selected_features = [feature_cols[i] for i in top_variance_indices]
+        
         return {
             "experiment": "Principal Component Analysis (PCA)",
             "metrics": {
@@ -78,7 +82,39 @@ def run():
                 "explained_variance_pc1": round(explained_variance_ratio[0], 4),
                 "explained_variance_pc2": round(explained_variance_ratio[1], 4),
                 "total_explained_variance": round(cumulative_variance[1], 4),
-                "feature_names": feature_cols[:2]
+                "selected_features": selected_features
+            },
+            "analysis": {
+                "graph_interpretation": f"""
+                **PCA Transformation Analysis:**
+                
+                **Before PCA (Left Plot):**
+                Shows original features with highest variance - data points spread in original coordinate system
+                
+                **After PCA (Right Plot):**
+                Shows same data transformed to principal component space - axes now represent directions of maximum variance
+                
+                **Variance Explained:**
+                - PC1 explains {explained_variance_ratio[0]:.1%} of total variance
+                - PC2 explains {explained_variance_ratio[1]:.1%} of total variance
+                - Combined: {cumulative_variance[1]:.1%} of total variance captured
+                
+                **Dimensionality Reduction:**
+                Reduced from {len(feature_cols)} features to 2 components while retaining {cumulative_variance[1]:.1%} of information
+                """,
+                "what_graph_shows": "Before/after comparison showing data transformation from original features to principal components",
+                "key_inferences": [
+                    f"Two components capture {cumulative_variance[1]:.1%} of data variance",
+                    "PCA removes redundancy while preserving important patterns",
+                    "Data becomes more interpretable in reduced dimensions"
+                ],
+                "why_graph_like_this": "Side-by-side plots clearly show how PCA transforms data while preserving the essential structure and relationships",
+                "practical_applications": [
+                    "Data visualization and exploration",
+                    "Feature reduction for machine learning",
+                    "Noise reduction in medical data",
+                    "Identifying key health indicators"
+                ]
             },
             "plot": plot_data
         }

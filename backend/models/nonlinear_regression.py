@@ -164,6 +164,40 @@ def run():
                 "high_risk_samples": int(sum(df_clean['High_Risk'])),
                 "low_risk_samples": int(len(df_clean) - sum(df_clean['High_Risk']))
             },
+            "analysis": {
+                "graph_interpretation": f"""
+                **Multivariate Nonlinear Regression Analysis:**
+                
+                **3D Scatter Plot Insights:**
+                The 3D visualization reveals natural clustering of patients in Age-BP-Cholesterol space:
+                - Red points (High Risk): {int(sum(df_clean['High_Risk']))} patients
+                - Blue points (Low Risk): {int(len(df_clean) - sum(df_clean['High_Risk']))} patients
+                
+                **Model Performance Comparison:**
+                - Decision Tree: {dt_accuracy:.2%} accuracy
+                - SVM RBF: {svm_accuracy:.2%} accuracy  
+                - Polynomial Regression: {poly_accuracy:.2%} accuracy
+                
+                **Confusion Matrix Analysis:**
+                Both matrices show classification performance with different color schemes for easy comparison
+                
+                **Nonlinear Relationships:**
+                Polynomial features capture complex interactions between age, blood pressure, and cholesterol levels
+                """,
+                "what_graph_shows": "3D patient distribution by risk level and confusion matrices comparing SVM vs Polynomial Regression performance",
+                "key_inferences": [
+                    f"Best performing model: {['Decision Tree', 'SVM RBF', 'Polynomial'][np.argmax([dt_accuracy, svm_accuracy, poly_accuracy])]}",
+                    "Clear risk group separation visible in 3D space",
+                    "Non-linear relationships exist between health indicators"
+                ],
+                "why_graph_like_this": "3D visualization reveals patterns impossible to see in 2D, while confusion matrices provide quantitative performance metrics",
+                "practical_applications": [
+                    "Multi-factor risk assessment in clinical settings",
+                    "Personalized treatment planning",
+                    "Early intervention strategies",
+                    "Healthcare resource optimization"
+                ]
+            },
             "plot": plot_data
         }
         

@@ -127,6 +127,36 @@ def run():
                 "wcss_values": wcss,
                 "cluster_statistics": cluster_stats
             },
+            "analysis": {
+                "graph_interpretation": f"""
+                **K-Means Clustering Analysis:**
+                
+                **Elbow Method Results:**
+                The elbow curve shows WCSS (Within-Cluster Sum of Squares) decreasing as clusters increase. The "elbow" point suggests optimal cluster number.
+                
+                **Cluster Characteristics:**
+                {chr(10).join([f"- Cluster {i+1}: {cluster_stats[f'cluster_{i+1}']['size']} patients (Avg Age: {cluster_stats[f'cluster_{i+1}']['avg_age']}, Avg BP: {cluster_stats[f'cluster_{i+1}']['avg_bp']})" for i in range(4)])}
+                
+                **Centroid Analysis:**
+                Yellow X marks show cluster centers - representing "typical" patient profile for each risk group
+                
+                **Patient Segmentation:**
+                Different colors represent distinct patient populations with similar health profiles
+                """,
+                "what_graph_shows": "Three plots: Elbow method for optimal clusters, Age vs BP clustering, and BP vs Cholesterol clustering",
+                "key_inferences": [
+                    "Patients naturally group into 4 distinct risk categories",
+                    "Age and blood pressure show clear clustering patterns",
+                    "Cholesterol levels vary significantly between clusters"
+                ],
+                "why_graph_like_this": "Scatter plots with color coding make it easy to see how patients group together based on similar health characteristics",
+                "practical_applications": [
+                    "Patient risk stratification",
+                    "Personalized treatment protocols",
+                    "Healthcare resource allocation",
+                    "Preventive care program design"
+                ]
+            },
             "plot": plot_data
         }
         
