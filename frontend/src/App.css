@@ -317,3 +317,55 @@ body {
 .insights-table tr:hover {
   background-color: #f8f9fa;
 }
+/* 📊 Visualization Grid Styling (Dashboard Only) */
+.visualization-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 40px;
+  margin-top: 2rem;
+  justify-items: center;
+  align-items: start;
+}
+
+.visualization-item {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.25s ease;
+  width: 95%;
+}
+
+.visualization-item:hover {
+  transform: scale(1.03);
+}
+
+.visualization-item h4 {
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.visualization-item img {
+  width: 95%;
+  max-width: 600px; /* bigger plots */
+  border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+}
+
+.insights-table td {
+  vertical-align: top;
+  padding: 10px;
+  line-height: 1.6;
+}
+
+.insights-table ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.insights-table b {
+  color: #333;
+}
