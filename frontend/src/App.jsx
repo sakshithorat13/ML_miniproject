@@ -1,204 +1,268 @@
 import React, { useState } from 'react';
-import HomePage from './HomePage';
+import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [selectedExperiment, setSelectedExperiment] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [selectedExperiment, setSelectedExperiment] = useState('');
-
-  const goToDashboard = () => {
-    setCurrentPage('dashboard');
-  };
-
-  const goToHome = () => {
-    setCurrentPage('home');
-    setResult(null);
-    setSelectedExperiment('');
-  };
-
-  const runExperiment = async () => {
-    if (!selectedExperiment) {
-      alert('Please select an experiment first!');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch('http://localhost:5000/experiment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ experiment: selectedExperiment }),
-      });
-      
-      const data = await response.json();
-      console.log('API Response:', data);
-      setResult(data);
-    } catch (error) {
-      console.error('Error:', error);
-      setResult({ error: error.message });
-    }
-    setLoading(false);
-  };
+  const [error, setError] = useState('');
 
   const experiments = [
-    { id: 'data_visualization', name: '📊 Data Visualization', description: 'Explore dataset patterns and correlations' },
-    { id: 'svm', name: '🎯 SVM Analysis', description: 'Support Vector Machine classification' },
-    { id: 'ensemble', name: '🌳 Ensemble Learning', description: 'Random Forest vs Gradient Boosting' },
-    { id: 'clustering', name: '🔍 Clustering', description: 'K-Means patient segmentation' },
-    { id: 'pca', name: '📈 PCA Analysis', description: 'Principal Component Analysis' },
-    { id: 'nonlinear_regression', name: '📊 Nonlinear Regression', description: 'Complex relationship modeling' },
-    { id: 'polynomial_regression', name: '🔬 Polynomial Regression', description: 'Higher-order feature interactions' }
+    { value: 'data_visualization', label: '📊 Data Visualization', description: 'Explore correlations and data distribution' },
+    { value: 'linear_regression', label: '📈 Linear Regression', description: 'Predict continuous health metrics' },
+    { value: 'classification', label: '🌳 Decision Tree Classification', description: 'Classify heart disease risk' },
+    { value: 'svm', label: '🔍 Support Vector Machine', description: 'Advanced classification analysis' },
+    { value: 'ensemble', label: '🌲 Ensemble Learning', description: 'Random Forest & Gradient Boosting' },
+    { value: 'nonlinear_regression', label: '📏 Polynomial Regression', description: 'Non-linear relationship modeling' },
+    { value: 'clustering', label: '🎯 Clustering Analysis', description: 'Discover patient groups' },
+    { value: 'pca', label: '📐 PCA Analysis', description: 'Dimensionality reduction' }
   ];
 
-  // Show HomePage first
-  if (currentPage === 'home') {
-    return <HomePage onGoToDashboard={goToDashboard} />;
-  }
+  const runExperiment = async () => {
+    if (!selectedExperiment) return;
+    
+    setLoading(true);
+    setError('');
+    setResult(null);
+    
+    try {
+      const response = await axios.post('http://localhost:5000/experiment', {
+        experiment: selectedExperiment
+      });
+      setResult(response.data);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to run experiment');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Dashboard page
+  const formatMetricValue = (value) => {
+    if (typeof value === 'number') return value.toFixed(4);
+    if (Array.isArray(value)) return JSON.stringify(value, null, 2);
+    if (typeof value === 'object') return JSON.stringify(value, null, 2);
+    return String(value);
+  };
+
   return (
-    <div className="App">
-      <header className="dashboard-header">
+    <div className="app">
+      <header className="header">
         <div className="header-content">
-          <button className="back-button" onClick={goToHome}>
-            ← Back to Home
-          </button>
-          <h1>ML Analytics Dashboard</h1>
-          <p>Heart Disease Prediction Experiments</p>
+          <h1 className="title">🏥 Healthcare ML Analytics Dashboard</h1>
+          <p className="subtitle">Interactive Machine Learning Experiments on Healthcare Data</p>
         </div>
       </header>
-      
-      <div className="dashboard-layout">
-        {/* Left Sidebar */}
-        <div className="sidebar">
-          <h3>Select Experiment</h3>
-          <div className="experiment-list">
-            {experiments.map((exp) => (
-              <div 
-                key={exp.id}
-                className={`experiment-item ${selectedExperiment === exp.id ? 'selected' : ''}`}
-                onClick={() => setSelectedExperiment(exp.id)}
-              >
-                <div className="exp-name">{exp.name}</div>
-                <div className="exp-description">{exp.description}</div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="run-section">
-            <button 
-              className="run-button" 
+
+      <div className="container">
+        <aside className="sidebar">
+          <div className="sidebar-content">
+            <h2 className="sidebar-title">ML Experiments</h2>
+            
+            <div className="experiment-list">
+              {experiments.map((exp) => (
+                <div
+                  key={exp.value}
+                  className={`experiment-card ${selectedExperiment === exp.value ? 'selected' : ''}`}
+                  onClick={() => setSelectedExperiment(exp.value)}
+                >
+                  <div className="experiment-label">{exp.label}</div>
+                  <div className="experiment-description">{exp.description}</div>
+                </div>
+              ))}
+            </div>
+            
+            <button
+              className={`run-button ${!selectedExperiment || loading ? 'disabled' : ''}`}
               onClick={runExperiment}
               disabled={!selectedExperiment || loading}
             >
-              {loading ? 'Running...' : 'Run Experiment'}
+              {loading ? '🔄 Running...' : '▶️ Run Experiment'}
             </button>
+
+            {selectedExperiment && (
+              <div className="selected-info">
+                <h3>Selected:</h3>
+                <p>{experiments.find(exp => exp.value === selectedExperiment)?.label}</p>
+              </div>
+            )}
           </div>
-        </div>
+        </aside>
 
-        {/* Main Content Area */}
-        <div className="main-content">
+        <main className="main-content">
           {loading && (
-            <div className="loading">
-              <div className="loading-spinner"></div>
-              <p>Running {experiments.find(e => e.id === selectedExperiment)?.name}...</p>
-            </div>
-          )}
-          
-          {result && !loading && (
-            <div className="experiment-results">
-              <h2>{result.experiment}</h2>
-              
-              {result.plot && (
-                <div className="plot-section">
-                  <img 
-                    src={`data:image/png;base64,${result.plot}`} 
-                    alt="Experiment Plot" 
-                    style={{ maxWidth: '100%', height: 'auto' }}
-                  />
-                </div>
-              )}
-              
-              <div className="metrics-section">
-                <h3>📊 Metrics</h3>
-                <div className="metrics-grid">
-                  {Object.entries(result.metrics || {}).map(([key, value]) => (
-                    <div key={key} className="metric-item">
-                      <strong>{key.replace(/_/g, ' ').toUpperCase()}:</strong> {
-                        typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)
-                      }
-                    </div>
-                  ))}
-                </div>
+            <div className="loading-container">
+              <div className="loading-spinner"><div className="spinner"></div></div>
+              <div className="loading-text">
+                <h3>🧠 Running ML Experiment...</h3>
+                <p>Processing healthcare data and generating insights</p>
               </div>
-              
-              {result.analysis && (
-                <div className="analysis-section">
-                  <h3>🔬 Analysis & Interpretation</h3>
-                  
-                  <div className="graph-interpretation">
-                    <h4>📈 Graph Interpretation:</h4>
-                    <div className="interpretation-content">
-                      {result.analysis.graph_interpretation.split('\n').map((line, index) => (
-                        <p key={index}>{line}</p>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="key-insights">
-                    <h4>🔍 Key Insights:</h4>
-                    <ul>
-                      {result.analysis.key_inferences?.map((insight, index) => (
-                        <li key={index}>{insight}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div className="what-graph-shows">
-                    <h4>📋 What the Graph Shows:</h4>
-                    <p>{result.analysis.what_graph_shows}</p>
-                  </div>
-                  
-                  <div className="why-graph-like-this">
-                    <h4>🤔 Why the Graph Looks Like This:</h4>
-                    <p>{result.analysis.why_graph_like_this}</p>
-                  </div>
-                  
-                  <div className="practical-applications">
-                    <h4>🏥 Practical Applications:</h4>
-                    <ul>
-                      {result.analysis.practical_applications?.map((app, index) => (
-                        <li key={index}>{app}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-              
-              {result.error && (
-                <div className="error-section">
-                  <h3>❌ Error</h3>
-                  <p>{result.error}</p>
-                </div>
-              )}
             </div>
           )}
 
-          {!result && !loading && (
-            <div className="welcome-message">
-              <h2>Welcome to ML Analytics Dashboard</h2>
-              <p>Select an experiment from the left sidebar and click "Run Experiment" to get started.</p>
-              <div className="dataset-info">
-                <h3>Dataset Information</h3>
-                <p>Using Heart Disease Prediction dataset with 270+ patient records and 13 key features including Age, Blood Pressure, Cholesterol, and more.</p>
+          {error && (
+            <div className="error-container">
+              <div className="error-content">
+                <h3>⚠️ Error</h3>
+                <p>{error}</p>
+                <button onClick={() => setError('')} className="error-dismiss">Dismiss</button>
               </div>
             </div>
           )}
-        </div>
+
+          {result && !loading && (
+            <div className="results-container">
+              <div className="results-header">
+                <h2 className="results-title">{result.experiment}</h2>
+                <div className="results-timestamp">⏰ Completed: {new Date().toLocaleString()}</div>
+              </div>
+
+              <div className="results-content">
+                {/* Metrics */}
+                {result.metrics && (
+                  <div className="metrics-section">
+                    <h3 className="section-title">📊 Experiment Metrics</h3>
+                    <div className="metrics-grid">
+                      {Object.entries(result.metrics).map(([key, value]) => (
+                        <div key={key} className="metric-card">
+                          <div className="metric-label">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                          <div className="metric-value">{formatMetricValue(value)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Plots */}
+                {(result.plot || result.plots) && (
+                  <div className="visualization-section">
+                    <h3 className="section-title">📈 Visualization Results</h3>
+
+                    {/* Single plot */}
+                    {result.plot && (
+                      <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                        <img
+                          src={`data:image/png;base64,${result.plot}`}
+                          alt="Experiment Plot"
+                          style={{ maxWidth: '100%', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Multiple plots */}
+                    {result.plots && (
+                      selectedExperiment === 'data_visualization' ? (
+                        <div className="visualization-grid">
+                          {Object.entries(result.plots).map(([key, val]) => (
+                            <div key={key} className="visualization-item">
+                              <h4>{key.replace(/_/g, ' ').toUpperCase()}</h4>
+                              <img src={`data:image/png;base64,${val}`} alt={key} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        Object.entries(result.plots).map(([key, val]) => (
+                          <div key={key} style={{ marginBottom: '3rem', textAlign: 'center' }}>
+                            <h4>{key.replace(/_/g, ' ').toUpperCase()}</h4>
+                            <img
+                              src={`data:image/png;base64,${val}`}
+                              alt={key}
+                              style={{ maxWidth: '100%', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
+                            />
+                          </div>
+                        ))
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* Insights Table */}
+                {result.insights_table && result.insights_table.length > 0 && (
+                  <div className="insights-section" style={{ marginTop: '2rem' }}>
+                    <h3 className="section-title">🧩 Insights and Interpretation</h3>
+                    <table className="insights-table">
+                      <thead>
+                        <tr>
+                          <th>Graph</th>
+                          <th>Insight</th>
+                        </tr>
+                      </thead>
+                     <tbody>
+  {result.insights_table.map((item, index) => (
+    <tr key={index}>
+      <td>{item.Graph}</td>
+      <td dangerouslySetInnerHTML={{ __html: item.Insight }}></td>
+    </tr>
+  ))}
+</tbody>
+
+                    </table>
+                  </div>
+                )}
+
+                {/* Analysis Section */}
+                {result.analysis && (
+                  <div className="analysis-section">
+                    <h3>🔬 Analysis & Interpretation</h3>
+                    
+                    <div className="graph-interpretation">
+                      <h4>📈 Graph Interpretation:</h4>
+                      <div className="interpretation-content">
+                        {result.analysis.graph_interpretation.split('\n').map((line, index) => (
+                          <p key={index}>{line}</p>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="key-insights">
+                      <h4>🔍 Key Insights:</h4>
+                      <ul>
+                        {result.analysis.key_inferences?.map((insight, index) => (
+                          <li key={index}>{insight}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div className="what-graph-shows">
+                      <h4>📋 What the Graph Shows:</h4>
+                      <p>{result.analysis.what_graph_shows}</p>
+                    </div>
+                    
+                    <div className="why-graph-like-this">
+                      <h4>🤔 Why the Graph Looks Like This:</h4>
+                      <p>{result.analysis.why_graph_like_this}</p>
+                    </div>
+                    
+                    <div className="practical-applications">
+                      <h4>🏥 Practical Applications:</h4>
+                      <ul>
+                        {result.analysis.practical_applications?.map((app, index) => (
+                          <li key={index}>{app}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!result && !loading && !error && (
+            <div className="welcome-container">
+              <div className="welcome-content">
+                <h2>🎯 Welcome to Healthcare ML Dashboard</h2>
+                <p>Select an experiment from the sidebar to begin your machine learning analysis</p>
+                
+                <div className="features-grid">
+                  <div className="feature-card"><h3>📊 Data Analysis</h3><p>Explore correlations and statistical insights</p></div>
+                  <div className="feature-card"><h3>🤖 ML Models</h3><p>Train and evaluate various algorithms</p></div>
+                  <div className="feature-card"><h3>📈 Visualizations</h3><p>Interactive charts and plots</p></div>
+                  <div className="feature-card"><h3>🔍 Insights</h3><p>Actionable healthcare analytics</p></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
