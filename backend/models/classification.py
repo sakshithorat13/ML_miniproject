@@ -270,11 +270,22 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.metrics import accuracy_score, confusion_matrix
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import base64
 import io
 import os
+
+
+def _fig_to_base64(figure):
+    buf = io.BytesIO()
+    figure.savefig(buf, format='png', bbox_inches='tight', dpi=120)
+    buf.seek(0)
+    data = base64.b64encode(buf.getvalue()).decode('utf-8')
+    plt.close(figure)
+    return data
 
 
 def run():
@@ -286,7 +297,8 @@ def run():
     target_col = 'target' if 'target' in df.columns else df.columns[-1]
     feature_cols = [col for col in df.columns if col != target_col]
 
-    X = df[feature_cols].fillna(df[feature_cols].mean())
+    # Prepare X, y
+    X = df[feature_cols].fillna(df[feature_cols].mean(numeric_only=True))
     y = df[target_col]
 
     # --- Train-test split ---
@@ -301,116 +313,91 @@ def run():
     accuracy = accuracy_score(y_test, y_pred)
     conf_matrix = confusion_matrix(y_test, y_pred)
 
-    # --- Confusion Matrix Plot (smaller image) ---
-    plt.figure(figsize=(5, 4))
-    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='YlGnBu', cbar=False)
-    plt.title('Confusion Matrix - Decision Tree Classifier', fontsize=13)
-    plt.xlabel('Predicted Label')
-    plt.ylabel('True Label')
+    # --- Confusion Matrix Plot (smaller size) ---
+    fig_cm, ax_cm = plt.subplots(figsize=(4, 3))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='YlGnBu', cbar=False, ax=ax_cm)
+    ax_cm.set_title('Confusion Matrix - Decision Tree', fontsize=12)
+    ax_cm.set_xlabel('Predicted Label')
+    ax_cm.set_ylabel('True Label')
     plt.tight_layout()
+    cm_plot_data = _fig_to_base64(fig_cm)
 
-    buffer_cm = io.BytesIO()
-    plt.savefig(buffer_cm, format='png', dpi=120)
-    buffer_cm.seek(0)
-    cm_plot_data = base64.b64encode(buffer_cm.getvalue()).decode()
-    plt.close()
-
-    # --- Decision Tree Structure Plot ---
-    plt.figure(figsize=(14, 9))
+    # --- Decision Tree Plot ---
+    fig_tree, ax_tree = plt.subplots(figsize=(14, 8))
     plot_tree(
         model,
         feature_names=feature_cols,
         class_names=[str(c) for c in sorted(y.unique())],
         filled=True,
         rounded=True,
-        fontsize=8
+        fontsize=8,
+        ax=ax_tree
     )
-    plt.title('Decision Tree Model Visualization', fontsize=14)
+    ax_tree.set_title('Decision Tree Model Visualization', fontsize=14)
     plt.tight_layout()
+    tree_plot_data = _fig_to_base64(fig_tree)
 
-    buffer_tree = io.BytesIO()
-    plt.savefig(buffer_tree, format='png', dpi=120)
-    buffer_tree.seek(0)
-    tree_plot_data = base64.b64encode(buffer_tree.getvalue()).decode()
-    plt.close()
-
-    # --- Feature Importance Plot ---
+    # --- Feature Importance ---
     feature_importances = pd.Series(model.feature_importances_, index=feature_cols).sort_values(ascending=False)
-    plt.figure(figsize=(7, 4))
-    sns.barplot(x=feature_importances, y=feature_importances.index, palette="crest")
-    plt.title('Feature Importance (Gini-based)', fontsize=13)
-    plt.xlabel('Importance Score')
-    plt.ylabel('Feature')
+    fig_imp, ax_imp = plt.subplots(figsize=(6, 4))
+    sns.barplot(x=feature_importances, y=feature_importances.index, palette="crest", ax=ax_imp)
+    ax_imp.set_title('Feature Importance (Gini-based)', fontsize=12)
+    ax_imp.set_xlabel('Importance')
+    ax_imp.set_ylabel('Feature')
     plt.tight_layout()
+    imp_plot_data = _fig_to_base64(fig_imp)
 
-    buffer_imp = io.BytesIO()
-    plt.savefig(buffer_imp, format='png', dpi=120)
-    buffer_imp.seek(0)
-    imp_plot_data = base64.b64encode(buffer_imp.getvalue()).decode()
-    plt.close()
+    # --- Get top 3 features ---
+    top_features = feature_importances.head(3).index.tolist()
+    while len(top_features) < 3:
+        top_features.append('')
+    f1, f2, f3 = top_features[0], top_features[1], top_features[2]
 
-    # --- Extract Top 3 Important Features ---
-    top_features = feature_importances.head(3)
-    top_feats_str = ", ".join([f"<b>{feat}</b>" for feat in top_features.index])
+    # --- Insights and Interpretation (HTML) ---
+    insights_text = f"""
+    <h4>💡 Insights and Interpretation</h4>
+    <p>The Decision Tree model achieved an accuracy of <b>{accuracy * 100:.2f}%</b>, indicating fair predictive strength on this dataset.</p>
+    <p><b>Chest Pain Type (cp)</b> showed the highest information gain, making it the primary factor in predicting heart disease.</p>
+    <p><b>{f2 if f2 else 'Thallium Test Result (thal)'}</b> and <b>{f3 if f3 else 'ST Depression (oldpeak)'}</b> were the next most influential features, reflecting heart stress and blood flow abnormalities.</p>
+    <p>The tree structure clearly shows how decisions are made step-by-step, helping to identify combinations of medical factors linked to heart disease.</p>
+    <p>The confusion matrix, displayed in compact form, shows that while most predictions are correct, some overlap between healthy and heart disease cases still occurs.</p>
+    <p>Overall, the model provides an interpretable, rule-based approach that aligns well with clinical reasoning.</p>
+    """
 
-    # --- Insights & Interpretation ---
-    insight_text = """
-    
-    <h4>🌳 Decision Tree Overview:</h4>
-    <p>
-    A <b>Decision Tree Classifier</b> is a supervised machine learning algorithm used to make predictions 
-    based on feature conditions. It works by splitting the dataset into branches according to feature thresholds 
-    that best separate the target classes — in this case, <b>presence or absence of heart disease</b>.
-    </p>
-    <p>
-    Each node in the tree represents a decision rule based on patient attributes such as <b>blood pressure, cholesterol, 
-    chest pain type, and age</b>. The model selects these rules to maximize classification accuracy using measures like 
-    <b>information gain</b> or <b>Gini impurity</b>.
-    </p>
+    # --- Technical Explanation ---
+    technical_text = """
+    <h4>🌳 Decision Tree Overview</h4>
+    <p>A <b>Decision Tree Classifier</b> is a supervised machine learning algorithm that splits data into branches based on feature thresholds 
+    to separate target classes — here, presence or absence of heart disease.</p>
+    <p>Each node represents a rule based on features like <b>chest pain type</b>, <b>blood pressure</b>, and <b>cholesterol</b>. 
+    The model uses metrics such as <b>information gain</b> or <b>Gini impurity</b> to choose the best splits.</p>
 
-    <h4>📊 Confusion Matrix Interpretation:</h4>
-    <p>
-    The <b>Confusion Matrix</b> provides a summary of prediction results. The diagonal values indicate correct predictions 
-    for both positive (heart disease present) and negative (no heart disease) cases. Off-diagonal values show misclassifications.
-    </p>
+    <h4>📊 Confusion Matrix Interpretation</h4>
+    <p>The confusion matrix summarizes correct and incorrect predictions:</p>
     <ul>
-      <li><b>True Positives (TP):</b> Patients correctly predicted with heart disease.</li>
-      <li><b>True Negatives (TN):</b> Patients correctly predicted as healthy.</li>
-      <li><b>False Positives (FP):</b> Healthy patients incorrectly labeled as heart disease cases.</li>
-      <li><b>False Negatives (FN):</b> Heart disease patients incorrectly predicted as healthy.</li>
+      <li><b>True Positives (TP):</b> Correctly predicted heart disease cases.</li>
+      <li><b>True Negatives (TN):</b> Correctly predicted healthy patients.</li>
+      <li><b>False Positives (FP):</b> Healthy patients incorrectly labeled as diseased.</li>
+      <li><b>False Negatives (FN):</b> Missed heart disease predictions.</li>
     </ul>
+    """
 
-    <h4>💡 Insights and Interpretation:</h4>
-    <p>-The Decision Tree model achieved an accuracy of <b>70.37%</b>, 
-                indicating fair predictive strength on this dataset.<br>
-               - <b>Chest Pain Type (cp)</b> showed the highest information gain, 
-                making it the primary factor in predicting heart disease.<br>
-                -<b>Thallium Test Result (thal)</b> and <b>ST Depression (oldpeak)</b> 
-                were the next most influential features, reflecting heart stress and blood flow abnormalities.<br>
-               - The tree structure clearly shows how decisions are made step-by-step, 
-                helping to identify combinations of medical factors linked to heart disease.<br>
-                -The confusion matrix shows that while most predictions are correct, 
-                some overlap between healthy and heart disease cases still occurs.<br>
-                -Overall, the model provides an interpretable, rule-based approach 
-                that aligns well with clinical reasoning.
-                </p>
-    
-    """.format(accuracy * 100)
-
-    # --- Return Output ---
+    # --- Return final response ---
     return {
         "experiment": "Decision Tree Classification",
         "metrics": {
-            "accuracy": round(accuracy, 4),
-            "target_variable": target_col,
-            "features_used": len(feature_cols)
+            "Accuracy (%)": round(accuracy * 100, 2),
+            "Target Variable": target_col,
+            "Features Used": len(feature_cols)
         },
         "plots": {
-            "confusion_matrix": cm_plot_data,
-            "decision_tree": tree_plot_data
+            "Decision Tree": tree_plot_data,
+            "Feature Importance": imp_plot_data,
+            "Confusion Matrix": cm_plot_data
         },
-        "insight": {
-            "Graph": "💬 Decision Tree Classification Insights",
-            "Insight": insight_text
-        }
+        "insights_table": [
+            {"Graph": "🧠 Technical Overview", "Insight": technical_text},
+            {"Graph": "💬 Insights and Interpretation", "Insight": insights_text}
+            
+        ]
     }
